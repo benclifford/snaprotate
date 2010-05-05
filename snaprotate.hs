@@ -1,6 +1,7 @@
 import System.IO
 
 import Data.List
+import Data.Maybe
 
 import Data.Time.Format
 import System.Locale
@@ -10,7 +11,7 @@ def :: [LevelDef]
 def = [
       ]
 
-data Snap = Snap String -- the directory name of the snapshot
+data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving Show
 
 type LevelDef = [Snap] -> IO ([Snap],[Snap])
@@ -21,11 +22,33 @@ type LevelDef = [Snap] -> IO ([Snap],[Snap])
 
 main = do
   putStrLn "snaprotate"
-  dirs <- readDirs
-  (keep,evict) <- keepLast24h dirs
+  filteredDirsA <- readDirs
+  let filteredDirs = filter (\fn -> "home-" `isPrefixOf` fn) filteredDirsA
+  putStr "after home prefix filter: "
+  print filteredDirs
+  let fltA = map (\fn -> (fn, fnToTime fn)) filteredDirs
+  putStr "after fltA: "
+  print fltA
+  let fltB = map (\(fn, t) -> maybe Nothing (\ut -> Just (fn,ut)) t) fltA
+  let fltC = catMaybes fltB
+  putStr "after ignoring: "
+  print fltC
+  let evict = map (\(fn,time) -> MkSnap fn time) fltC
+  -- TODO -- multiple ignore stages (with recorded reasons) here
+  -- reasons to ignore:
+  -- i) directoryname prefix (hardcoded elsewhere at the moment)
+
+  -- ii) unparseable date (at same time as converting to a Snap type)
+
+  -- note the naming here -- in general, keeps should be appended, and
+  -- evict should be serially threaded
+  (keep1,evict) <- keepLast24h evict
   -- assert keep ++ delete ==uptoorder== dirs
-  putStr "keep: "
-  print keep
+  (keep2,evict) <- keepOnePerMonth evict
+  putStr "keep1: "
+  print keep1
+  putStr "keep2: "
+  print keep2
   putStr "evict: "
   print evict
 
@@ -36,7 +59,7 @@ readDirs = do
   -- hClose h -- can't do this here because hGetContents reads lazily
   -- but the assumption at the moment is that this program is short lived
   -- so it'll close 'soon' anyway when we exit
-  return (map Snap (lines s))
+  return (lines s)
 
 keepEverything :: LevelDef
 keepEverything l = return (l,[])
@@ -55,16 +78,38 @@ twodays = 2 * oneday
 -- the group of available snaps as a whole.
 keepLast24h l = do 
     now <- getCurrentTime
-    let keepable snap = let
-           maybeSnaptime = snapToTime snap
-         in maybe True (\snaptime -> (now `diffUTCTime` snaptime) > twodays ) maybeSnaptime
+    let keepable snap = (now `diffUTCTime` snaptime snap) > twodays
     let swap (a,b) = (b,a)
     return $ swap $ partition keepable l
 
-
-snapToTime :: Snap -> Maybe UTCTime
-snapToTime (Snap fn) = parseTime defaultTimeLocale "home-%Y-%m-%d-%H%M%z" fn
+-- TODO this needs to work on something other than a "home" prefix. perhaps
+-- the prefix could be specified on the command line, and we only pay
+-- attention to files with that prefix.
+fnToTime :: String -> Maybe UTCTime
+fnToTime fn = parseTime defaultTimeLocale "home-%Y-%m-%d-%H%M%z" fn
 -- eg:  home-2010-05-03-2309+0000
 
 
+-- for each month, keeps the earliest in that month (that has not been
+-- kept by previous levels)
+-- again, we have to have some special behaviour for unparseable timestamps
+-- perhaps I should filter things out right at the start that have no
+-- valid timestamps? then each Snap will contain a definite UTCTime, rather
+-- than a maybe.
+-- output should then list 'ignored' directories as well as kept and
+-- evicted.
+-- or maybe 'ignored' then fits into a more abstract annotating framework too?
+keepOnePerMonth :: LevelDef
+keepOnePerMonth snaps = do
+   let ymtime t = formatTime defaultTimeLocale "%Y-%m" t
+   let timedSnaps = map (\s ->(s, snaptime s)) snaps -- annotate with time
+   let ymSnaps = map (\(s,t) -> (s, ymtime t)) timedSnaps -- project year and month
+   let groupedByYM = groupBy (\(_,l) -> \(_,r) -> l==r) ymSnaps
+   print $ "grouped: "++(show groupedByYM)
+   -- partition by month -- map to time, then extract year and month component
+   let firstOfEachYM = map fst (map head groupedByYM)
+   -- sort each partition by date
+   -- pick the first of each partition
+   -- return all of those as keepers
+   return (firstOfEachYM,[])
 
