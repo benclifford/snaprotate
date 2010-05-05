@@ -1,3 +1,4 @@
+import System.Directory
 import System.IO
 
 import Data.List
@@ -6,6 +7,8 @@ import Data.Maybe
 import Data.Time.Format
 import System.Locale
 import Data.Time.Clock
+
+prefix="root"
 
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving (Show, Eq)
@@ -18,8 +21,8 @@ type LevelDef = [Snap] -> IO ([Snap],[Snap])
 
 main = do
   logProgress "snaprotate"
-  filteredDirsA <- readDirs
-  let filteredDirs = filter (\fn -> "home-" `isPrefixOf` fn) filteredDirsA
+  filteredDirs <- readDirs
+--  let filteredDirs = filter (\fn -> "home-" `isPrefixOf` fn) filteredDirsA
   logDebug "after home prefix filter: "
   logDebug $ show filteredDirs
   let fltA = map (\fn -> (fn, fnToTime fn)) filteredDirs
@@ -29,7 +32,8 @@ main = do
   let fltC = catMaybes fltB
   logDebug "after ignoring: "
   logDebug $ show fltC
-  let original = map (\(fn,time) -> MkSnap fn time) fltC
+  let sorted = sortBy (\(_,l) -> \(_,r) -> compare l r) fltC
+  let original = map (\(fn,time) -> MkSnap fn time) sorted
   -- TODO -- multiple ignore stages (with recorded reasons) here
   -- reasons to ignore:
   -- i) directoryname prefix (hardcoded elsewhere at the moment)
@@ -51,16 +55,13 @@ main = do
   logDebug $ show keep3
   logDebug "evict: "
   logDebug $ show evictF
+  mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rfv "++f) evictF
   -- TODO some actual output
 
 -- mmm fake
 readDirs = do
-  h <- openFile "snapexample" ReadMode
-  s <- hGetContents h
-  -- hClose h -- can't do this here because hGetContents reads lazily
-  -- but the assumption at the moment is that this program is short lived
-  -- so it'll close 'soon' anyway when we exit
-  return (lines s)
+  dirs <- getDirectoryContents "."
+  return $ filter (\s -> s /= "." && s /= "..") dirs
 
 keepEverything :: LevelDef
 keepEverything l = return (l,[])
@@ -93,7 +94,7 @@ keepLastWithinDuration duration l = do
 -- the prefix could be specified on the command line, and we only pay
 -- attention to files with that prefix.
 fnToTime :: String -> Maybe UTCTime
-fnToTime fn = parseTime defaultTimeLocale "home-%Y-%m-%d-%H%M%z" fn
+fnToTime fn = parseTime defaultTimeLocale (prefix++"-%Y-%m-%d-%H%M%z") fn
 -- eg:  home-2010-05-03-2309+0000
 
 
