@@ -7,10 +7,6 @@ import Data.Time.Format
 import System.Locale
 import Data.Time.Clock
 
-def :: [LevelDef]
-def = [
-      ]
-
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving (Show, Eq)
 
