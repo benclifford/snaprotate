@@ -12,7 +12,7 @@ def = [
       ]
 
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
-  deriving Show
+  deriving (Show, Eq)
 
 type LevelDef = [Snap] -> IO ([Snap],[Snap])
 -- assert on behaviour of LevelDef functions:
@@ -33,7 +33,7 @@ main = do
   let fltC = catMaybes fltB
   putStr "after ignoring: "
   print fltC
-  let evict = map (\(fn,time) -> MkSnap fn time) fltC
+  let original = map (\(fn,time) -> MkSnap fn time) fltC
   -- TODO -- multiple ignore stages (with recorded reasons) here
   -- reasons to ignore:
   -- i) directoryname prefix (hardcoded elsewhere at the moment)
@@ -42,15 +42,15 @@ main = do
 
   -- note the naming here -- in general, keeps should be appended, and
   -- evict should be serially threaded
-  (keep1,evict) <- keepLast24h evict
+  (keep1,evict1) <- keepLast24h original
   -- assert keep ++ delete ==uptoorder== dirs
-  (keep2,evict) <- keepOnePerMonth evict
+  (keep2,evict2) <- keepOnePerMonth evict1
   putStr "keep1: "
   print keep1
   putStr "keep2: "
   print keep2
   putStr "evict: "
-  print evict
+  print evict2
 
 -- mmm fake
 readDirs = do
@@ -111,5 +111,5 @@ keepOnePerMonth snaps = do
    -- sort each partition by date
    -- pick the first of each partition
    -- return all of those as keepers
-   return (firstOfEachYM,[])
+   return (firstOfEachYM, snaps \\ firstOfEachYM)
 
