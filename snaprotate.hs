@@ -40,13 +40,17 @@ main = do
   -- evict should be serially threaded
   (keep1,evict1) <- keepLast24h original
   -- assert keep ++ delete ==uptoorder== dirs
-  (keep2,evict2) <- keepOnePerMonth evict1
+  (keep2,evict2) <- keepOnePerWeekLast4Weeks evict1
+  (keep3,evict3) <- keepOnePerMonth evict2
+  let (keepF,evictF) = (keep3,evict3)
   logDebug "keep1: "
   logDebug $ show keep1
   logDebug "keep2: "
   logDebug $ show keep2
+  logDebug "keep3: "
+  logDebug $ show keep3
   logDebug "evict: "
-  logDebug $ show evict2
+  logDebug $ show evictF
   -- TODO some actual output
 
 -- mmm fake
@@ -66,6 +70,7 @@ oneday :: NominalDiffTime
 oneday = fromRational $ toRational $ secondsToDiffTime (24 * 60 * 60)
 
 twodays = 2 * oneday
+oneweek = 7 * oneday
 
 -- keep everything from the last 24h, and everything that we can't
 -- parse a time for
@@ -73,11 +78,16 @@ twodays = 2 * oneday
 -- undecided, rather than keep or evict
 -- The implementation of this considers each snap individually rather than
 -- the group of available snaps as a whole.
-keepLast24h l = do 
+
+keepLast24h = keepLastWithinDuration twodays -- this form makes it obvious that the function doesn't do what its name says
+
+keepLastWithinDuration duration l = do 
     now <- getCurrentTime
-    let keepable snap = (now `diffUTCTime` snaptime snap) > twodays
+    let keepable snap = (now `diffUTCTime` snaptime snap) > duration
     let swap (a,b) = (b,a)
     return $ swap $ partition keepable l
+
+
 
 -- TODO this needs to work on something other than a "home" prefix. perhaps
 -- the prefix could be specified on the command line, and we only pay
@@ -97,12 +107,16 @@ fnToTime fn = parseTime defaultTimeLocale "home-%Y-%m-%d-%H%M%z" fn
 -- evicted.
 -- or maybe 'ignored' then fits into a more abstract annotating framework too?
 keepOnePerMonth :: LevelDef
-keepOnePerMonth snaps = do
-   let ymtime t = formatTime defaultTimeLocale "%Y-%m" t
+keepOnePerMonth = keepOnePerTimeFormat "%Y-%m"
+
+-- fmt defines an equivalence relation on dates, and we keep one in each
+-- of those equivalence classes.
+keepOnePerTimeFormat fmt snaps = do
+   let ymtime t = formatTime defaultTimeLocale fmt t
    let timedSnaps = map (\s ->(s, snaptime s)) snaps -- annotate with time
    let ymSnaps = map (\(s,t) -> (s, ymtime t)) timedSnaps -- project year and month
    let groupedByYM = groupBy (\(_,l) -> \(_,r) -> l==r) ymSnaps
-   print $ "grouped: "++(show groupedByYM)
+   logDebug $ "grouped: "++(show groupedByYM)
    -- partition by month -- map to time, then extract year and month component
    let firstOfEachYM = map fst (map head groupedByYM)
    -- sort each partition by date
@@ -110,6 +124,31 @@ keepOnePerMonth snaps = do
    -- return all of those as keepers
    return (firstOfEachYM, snaps \\ firstOfEachYM)
 
+-- two filters here - one looks like keepOnePerMonth (but for weeks) and
+-- another evicts everything more than 4 weeks old
+-- we could define this as a level combinator for building a new leveldef
+-- out of an existing pair of leveldefs, that looks different from the
+-- existing idea I had of leveldef composition
+-- the existing idea applies one level def that can unilaterally keep, and
+-- then allows a second level def to also unilaterally keep. evictions from
+-- this composite level are only if *both* level defs evict.
+-- In this new combinator that I'm thinking of, either level def can
+-- evict, and both levels need to keep in order for the combined level
+-- to keep.
+keepOnePerWeekLast4Weeks :: LevelDef
+keepOnePerWeekLast4Weeks = keepOnePerWeek <&&> keepLast4Weeks
+
+keepOnePerWeek = keepOnePerTimeFormat "%Y-%U"
+keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
+
+-- keeps if both of these levels signifies keep, otherwise evicts
+(<&&>) :: LevelDef -> LevelDef -> LevelDef
+(l <&&> r) snap = do
+  (keepL, evictL) <- l snap
+  (keepR, evictR) <- r snap
+  let keepF = keepL `intersect` keepR
+  let evictF = snap \\ keepF
+  return (keepF, evictF)
 
 logProgress str = hPutStrLn stderr str
 logDebug str = hPutStrLn stderr str
