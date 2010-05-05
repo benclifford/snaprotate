@@ -17,18 +17,18 @@ type LevelDef = [Snap] -> IO ([Snap],[Snap])
 --    any side-effects are OK as long as they're 'sane'
 
 main = do
-  putStrLn "snaprotate"
+  logProgress "snaprotate"
   filteredDirsA <- readDirs
   let filteredDirs = filter (\fn -> "home-" `isPrefixOf` fn) filteredDirsA
-  putStr "after home prefix filter: "
-  print filteredDirs
+  logDebug "after home prefix filter: "
+  logDebug $ show filteredDirs
   let fltA = map (\fn -> (fn, fnToTime fn)) filteredDirs
-  putStr "after fltA: "
-  print fltA
+  logDebug "after fltA: "
+  logDebug $ show fltA
   let fltB = map (\(fn, t) -> maybe Nothing (\ut -> Just (fn,ut)) t) fltA
   let fltC = catMaybes fltB
-  putStr "after ignoring: "
-  print fltC
+  logDebug "after ignoring: "
+  logDebug $ show fltC
   let original = map (\(fn,time) -> MkSnap fn time) fltC
   -- TODO -- multiple ignore stages (with recorded reasons) here
   -- reasons to ignore:
@@ -41,12 +41,13 @@ main = do
   (keep1,evict1) <- keepLast24h original
   -- assert keep ++ delete ==uptoorder== dirs
   (keep2,evict2) <- keepOnePerMonth evict1
-  putStr "keep1: "
-  print keep1
-  putStr "keep2: "
-  print keep2
-  putStr "evict: "
-  print evict2
+  logDebug "keep1: "
+  logDebug $ show keep1
+  logDebug "keep2: "
+  logDebug $ show keep2
+  logDebug "evict: "
+  logDebug $ show evict2
+  -- TODO some actual output
 
 -- mmm fake
 readDirs = do
@@ -108,4 +109,8 @@ keepOnePerMonth snaps = do
    -- pick the first of each partition
    -- return all of those as keepers
    return (firstOfEachYM, snaps \\ firstOfEachYM)
+
+
+logProgress str = hPutStrLn stderr str
+logDebug str = hPutStrLn stderr str
 
