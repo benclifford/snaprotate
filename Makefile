@@ -1,6 +1,6 @@
 
-snaprotate.o: snaprotate.hs
-	ghc --make snaprotate.hs
+SnapRotate.o: SnapRotate.hs
+	ghc --make SnapRotate.hs
 
 clean:
-	rm -f snaprotate.o snaprotate.hi
+	rm -f SnapRotate.o SnapRotate.hi
