@@ -1,0 +1,10 @@
+#!/usr/bin/env snaprotate
+import SnapRotate
+main = runLevels config
+
+level1 = keepLast24h <?> "keep last 48h"
+level2 = keepOnePerWeekLast4Weeks <?> "one per week, last month"
+level3 =  keepOnePerMonth <?> "one per month, forever"
+
+config = level1 <||> level2 <||> level3
+
