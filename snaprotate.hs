@@ -16,7 +16,12 @@ import Control.Applicative
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving (Show, Eq)
 
-type LevelDef = [Snap] -> IO ([Snap],[Snap])
+data Keep = MkKeep { keeper :: Snap, reason :: String } deriving Show
+instance Eq Keep where 
+  (MkKeep l _) == (MkKeep r _) = l == r
+-- should remove this Eq and have explicit unwrapping of the keeper if thats what we want to compare, which also forces us to be more explicit about the reason string.
+
+type LevelDef = [Snap] -> IO ([Keep],[Snap])
 -- assert on behaviour of LevelDef functions:
 --    (a,b) = f existing
 --    a ++ b == existing (up to order)
@@ -56,6 +61,7 @@ main = do
   logDebug $ show keepF
   logDebug "evict: "
   logDebug $ show evictF
+  mapM_ (\(MkKeep (MkSnap fn _) reason) -> putStrLn $ "# keep: "++fn++": "++reason) keepF
   mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rfv "++f) evictF
   -- TODO some actual output
 
@@ -65,7 +71,7 @@ readDirs = do
   return $ filter (\s -> s /= "." && s /= "..") dirs
 
 keepEverything :: LevelDef
-keepEverything l = return (l,[])
+keepEverything l = return (snapsToKeeps "keepEverything" l,[])
 
 -- whats the best way to get this constant?
 oneday :: NominalDiffTime
@@ -86,8 +92,8 @@ keepLast24h = keepLastWithinDuration twodays -- this form makes it obvious that 
 keepLastWithinDuration duration l = do 
     now <- getCurrentTime
     let keepable snap = (now `diffUTCTime` snaptime snap) > duration
-    let swap (a,b) = (b,a)
-    return $ swap $ partition keepable l
+    let rearrange (a,b) = (snapsToKeeps "keepLastWithinDuration" b,a)
+    return $ rearrange $ partition keepable l
 
 
 
@@ -124,7 +130,7 @@ keepOnePerTimeFormat fmt snaps = do
    -- sort each partition by date
    -- pick the first of each partition
    -- return all of those as keepers
-   return (firstOfEachYM, snaps \\ firstOfEachYM)
+   return (snapsToKeeps "keepOnePerTimeFormat" firstOfEachYM, snaps \\ firstOfEachYM)
 
 -- two filters here - one looks like keepOnePerMonth (but for weeks) and
 -- another evicts everything more than 4 weeks old
@@ -148,8 +154,8 @@ keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
 (l <&&> r) snap = do
   (keepL, evictL) <- l snap
   (keepR, evictR) <- r snap
-  let keepF = keepL `intersect` keepR
-  let evictF = snap \\ keepF
+  let keepF = keepL `intersect` keepR -- TODO this intersect is no good because the reasons will differ...
+  let evictF = snap \\ (keepsToSnaps keepF)
   return (keepF, evictF)
 
 -- keeps if either of these levels signifies keep, otherwise evicts
@@ -161,7 +167,18 @@ keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
 
 -- will be used for annotating keeps, but not impl yet
 (<?>) :: LevelDef -> String -> LevelDef
-l <?> desc = l
+(l <?> desc) x = do
+  (keeps, evicts) <-  l x
+  return (snapsToKeeps desc (keepsToSnaps keeps), evicts)
+
+keepsToSnaps :: [Keep] -> [Snap]
+keepsToSnaps = map keepToSnap
+keepToSnap (MkKeep s _) = s
+
+snapsToKeeps :: String -> [Snap] -> [Keep]
+snapsToKeeps reason = map (snapToKeep reason)
+
+snapToKeep reason snap = MkKeep snap reason -- so almost the MkKeep constructor
 
 -- logging
 logProgress str = hPutStrLn stderr str
