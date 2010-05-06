@@ -42,17 +42,13 @@ main = do
 
   -- note the naming here -- in general, keeps should be appended, and
   -- evict should be serially threaded
-  (keep1,evict1) <- keepLast24h original
+  let level1 = keepLast24h
   -- assert keep ++ delete ==uptoorder== dirs
-  (keep2,evict2) <- keepOnePerWeekLast4Weeks evict1
-  (keep3,evict3) <- keepOnePerMonth evict2
-  let (keepF,evictF) = (keep3,evict3)
-  logDebug "keep1: "
-  logDebug $ show keep1
-  logDebug "keep2: "
-  logDebug $ show keep2
-  logDebug "keep3: "
-  logDebug $ show keep3
+  let level2 = keepOnePerWeekLast4Weeks
+  let level3 =  keepOnePerMonth
+  (keepF,evictF) <- (level1 <||> level2 <||> level3) original
+  logDebug "keep: "
+  logDebug $ show keepF
   logDebug "evict: "
   logDebug $ show evictF
   mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rfv "++f) evictF
@@ -150,6 +146,13 @@ keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
   let keepF = keepL `intersect` keepR
   let evictF = snap \\ keepF
   return (keepF, evictF)
+
+-- keeps if either of these levels signifies keep, otherwise evicts
+(<||>) :: LevelDef -> LevelDef -> LevelDef
+(l <||> r) snap = do
+  (keepL, evictL) <- l snap
+  (keepR, evictR) <- r evictL
+  return (keepL ++ keepR, evictR)
 
 logProgress str = hPutStrLn stderr str
 logDebug str = hPutStrLn stderr str
