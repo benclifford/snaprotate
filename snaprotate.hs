@@ -52,10 +52,10 @@ main = do
 
   -- note the naming here -- in general, keeps should be appended, and
   -- evict should be serially threaded
-  let level1 = keepLast24h
+  let level1 = keepLast24h <?> "keep last 48h"
   -- assert keep ++ delete ==uptoorder== dirs
-  let level2 = keepOnePerWeekLast4Weeks
-  let level3 =  keepOnePerMonth
+  let level2 = keepOnePerWeekLast4Weeks <?> "one per week, last month"
+  let level3 =  keepOnePerMonth <?> "one per month, forever"
   (keepF,evictF) <- (level1 <||> level2 <||> level3) original
   logDebug "keep: "
   logDebug $ show keepF
