@@ -1,4 +1,6 @@
 
+module SnapRotate where 
+
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
@@ -27,7 +29,7 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 --    a ++ b == existing (up to order)
 --    any side-effects are OK as long as they're 'sane'
 
-main = do
+runLevels levels = do
   logProgress "snaprotate, Copyright 2010 Ben Clifford benc@hawaga.org.uk"
   filteredDirs <- readDirs
   (opts,_,_) <- getOpt Permute commandLineOptions <$> getArgs
@@ -52,11 +54,7 @@ main = do
 
   -- note the naming here -- in general, keeps should be appended, and
   -- evict should be serially threaded
-  let level1 = keepLast24h <?> "keep last 48h"
-  -- assert keep ++ delete ==uptoorder== dirs
-  let level2 = keepOnePerWeekLast4Weeks <?> "one per week, last month"
-  let level3 =  keepOnePerMonth <?> "one per month, forever"
-  (keepF,evictF) <- (level1 <||> level2 <||> level3) original
+  (keepF,evictF) <- levels original
   logDebug "keep: "
   logDebug $ show keepF
   logDebug "evict: "
