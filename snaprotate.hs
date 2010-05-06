@@ -169,6 +169,7 @@ keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
 (<?>) :: LevelDef -> String -> LevelDef
 (l <?> desc) x = do
   (keeps, evicts) <-  l x
+  -- return (map (\(MkKeep s oldreason) -> MkKeep s (desc ++ ": " ++ oldreason)) keeps , evicts)
   return (snapsToKeeps desc (keepsToSnaps keeps), evicts)
 
 keepsToSnaps :: [Keep] -> [Snap]
