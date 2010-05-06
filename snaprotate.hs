@@ -62,7 +62,7 @@ main = do
   logDebug "evict: "
   logDebug $ show evictF
   mapM_ (\(MkKeep (MkSnap fn _) reason) -> putStrLn $ "# keep: "++fn++": "++reason) keepF
-  mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rfv "++f) evictF
+  mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rf "++f) evictF
   -- TODO some actual output
 
 -- mmm fake
