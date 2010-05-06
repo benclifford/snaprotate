@@ -1,3 +1,19 @@
 #!/bin/bash
 
-runhaskell $@
+FN=$(mktemp /tmp/snaprotateXXXXX).hs
+FNHS=$FN.hs
+
+echo Will use filename $FNHS
+
+echo params are $@
+
+cat > $FNHS << 32804384892038493284093
+import SnapRotate
+main = runLevels policy
+
+32804384892038493284093
+
+cat $1 | grep --invert-match '^#!' >> $FNHS
+shift
+runhaskell $FNHS $@
+
