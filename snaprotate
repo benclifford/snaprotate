@@ -3,9 +3,13 @@
 FN=$(mktemp /tmp/snaprotateXXXXX).hs
 FNHS=$FN.hs
 
-echo Will use filename $FNHS
+# echo Will use filename $FNHS >&2
 
-echo params are $@
+# echo params are $@ >&2
+
+# echo pos 0 is $0 >&2
+# echo dirname of pos 0 is $(dirname $0) >&2
+LIBDIR=$(dirname $0)
 
 cat > $FNHS << 32804384892038493284093
 import SnapRotate
@@ -15,5 +19,5 @@ main = runLevels policy
 
 cat $1 | grep --invert-match '^#!' >> $FNHS
 shift
-runhaskell $FNHS $@
+runhaskell -i$LIBDIR $FNHS $@
 

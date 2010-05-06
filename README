@@ -23,7 +23,7 @@ create by (for example) date +%Y-%m-%d-%H%M%z
 Create a policy file like example.snap (there are more details below).
 Then, sitting in your snapshot root directory, type:
 
- $ example.snap --base root
+ $ /path/to/example.snap --base root
 
 This will generate a bunch of debugging info on stderr, and shell commands
 on stdout - for each directory, there will either be an rm command to
