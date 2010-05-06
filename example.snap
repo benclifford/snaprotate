@@ -2,9 +2,19 @@
 import SnapRotate
 main = runLevels policy
 
-level1 = keepLast24h <?> "keep last 48h"
+policy = level1 <||> level2 <||> level3
+
+level1 = (keepLastWithinDuration twodays) <?> "keep last 48h"
 level2 = keepOnePerWeekLast4Weeks <?> "one per week, last month"
 level3 =  keepOnePerMonth <?> "one per month, forever"
 
-policy = level1 <||> level2 <||> level3
+twodays = 2 * oneday
+oneweek = 7 * oneday
+
+keepOnePerMonth = keepOnePerTimeFormat "%Y-%m"
+
+keepOnePerWeekLast4Weeks = keepOnePerWeek <&&> keepLast4Weeks
+
+keepOnePerWeek = keepOnePerTimeFormat "%Y-%U"
+keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
 

@@ -75,18 +75,6 @@ keepEverything l = return (snapsToKeeps "keepEverything" l,[])
 oneday :: NominalDiffTime
 oneday = fromRational $ toRational $ secondsToDiffTime (24 * 60 * 60)
 
-twodays = 2 * oneday
-oneweek = 7 * oneday
-
--- keep everything from the last 24h, and everything that we can't
--- parse a time for
--- If we move to a tristate system later, then timeparsing should be
--- undecided, rather than keep or evict
--- The implementation of this considers each snap individually rather than
--- the group of available snaps as a whole.
-
-keepLast24h = keepLastWithinDuration twodays -- this form makes it obvious that the function doesn't do what its name says
-
 keepLastWithinDuration duration l = do 
     now <- getCurrentTime
     let keepable snap = (now `diffUTCTime` snaptime snap) > duration
@@ -103,18 +91,6 @@ fnToTime base fn = parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn
 -- eg:  home-2010-05-03-2309+0000
 
 
--- for each month, keeps the earliest in that month (that has not been
--- kept by previous levels)
--- again, we have to have some special behaviour for unparseable timestamps
--- perhaps I should filter things out right at the start that have no
--- valid timestamps? then each Snap will contain a definite UTCTime, rather
--- than a maybe.
--- output should then list 'ignored' directories as well as kept and
--- evicted.
--- or maybe 'ignored' then fits into a more abstract annotating framework too?
-keepOnePerMonth :: LevelDef
-keepOnePerMonth = keepOnePerTimeFormat "%Y-%m"
-
 -- fmt defines an equivalence relation on dates, and we keep one in each
 -- of those equivalence classes.
 keepOnePerTimeFormat fmt snaps = do
@@ -129,23 +105,6 @@ keepOnePerTimeFormat fmt snaps = do
    -- pick the first of each partition
    -- return all of those as keepers
    return (snapsToKeeps "keepOnePerTimeFormat" firstOfEachYM, snaps \\ firstOfEachYM)
-
--- two filters here - one looks like keepOnePerMonth (but for weeks) and
--- another evicts everything more than 4 weeks old
--- we could define this as a level combinator for building a new leveldef
--- out of an existing pair of leveldefs, that looks different from the
--- existing idea I had of leveldef composition
--- the existing idea applies one level def that can unilaterally keep, and
--- then allows a second level def to also unilaterally keep. evictions from
--- this composite level are only if *both* level defs evict.
--- In this new combinator that I'm thinking of, either level def can
--- evict, and both levels need to keep in order for the combined level
--- to keep.
-keepOnePerWeekLast4Weeks :: LevelDef
-keepOnePerWeekLast4Weeks = keepOnePerWeek <&&> keepLast4Weeks
-
-keepOnePerWeek = keepOnePerTimeFormat "%Y-%U"
-keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
 
 -- keeps if both of these levels signifies keep, otherwise evicts
 (<&&>) :: LevelDef -> LevelDef -> LevelDef
