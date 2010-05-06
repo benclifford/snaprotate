@@ -1,4 +1,7 @@
+
+import System.Console.GetOpt
 import System.Directory
+import System.Environment
 import System.IO
 
 import Data.List
@@ -8,7 +11,7 @@ import Data.Time.Format
 import System.Locale
 import Data.Time.Clock
 
-prefix="root"
+import Control.Applicative
 
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving (Show, Eq)
@@ -20,12 +23,14 @@ type LevelDef = [Snap] -> IO ([Snap],[Snap])
 --    any side-effects are OK as long as they're 'sane'
 
 main = do
-  logProgress "snaprotate"
+  logProgress "snaprotate, Copyright 2010 Ben Clifford benc@hawaga.org.uk"
   filteredDirs <- readDirs
---  let filteredDirs = filter (\fn -> "home-" `isPrefixOf` fn) filteredDirsA
+  (opts,_,_) <- getOpt Permute commandLineOptions <$> getArgs
+  let base = extractBase opts
+  logDebug $ show opts
   logDebug "after home prefix filter: "
   logDebug $ show filteredDirs
-  let fltA = map (\fn -> (fn, fnToTime fn)) filteredDirs
+  let fltA = map (\fn -> (fn, fnToTime base fn)) filteredDirs
   logDebug "after fltA: "
   logDebug $ show fltA
   let fltB = map (\(fn, t) -> maybe Nothing (\ut -> Just (fn,ut)) t) fltA
@@ -89,8 +94,8 @@ keepLastWithinDuration duration l = do
 -- TODO this needs to work on something other than a "home" prefix. perhaps
 -- the prefix could be specified on the command line, and we only pay
 -- attention to files with that prefix.
-fnToTime :: String -> Maybe UTCTime
-fnToTime fn = parseTime defaultTimeLocale (prefix++"-%Y-%m-%d-%H%M%z") fn
+fnToTime :: String -> String -> Maybe UTCTime
+fnToTime base fn = parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn
 -- eg:  home-2010-05-03-2309+0000
 
 
@@ -154,6 +159,27 @@ keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
   (keepR, evictR) <- r evictL
   return (keepL ++ keepR, evictR)
 
+-- will be used for annotating keeps, but not impl yet
+(<?>) :: LevelDef -> String -> LevelDef
+l <?> desc = l
+
+-- logging
 logProgress str = hPutStrLn stderr str
 logDebug str = hPutStrLn stderr str
+
+-- commandline
+
+data CLIOpts = OptBase String deriving Show
+
+commandLineOptions = [
+  Option "b" ["base"] (ReqArg OptBase "BASE") "base of snapshot directory names"
+ ]
+
+-- as base is a required opt, then this must always work
+-- so this code doesn't handle the case of running out of opts...
+-- but its not demonstrated statically that this will work.
+-- also this def gives a pattern match overlap warning, but it works anyway.
+extractBase :: [CLIOpts] -> String
+extractBase ((OptBase s):rest) = s
+extractBase (_:rest)= extractBase rest
 
