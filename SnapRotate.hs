@@ -116,8 +116,18 @@ keepOnePerTimeFormat fmt snaps = do
   return (keepF, evictF)
 
 -- keeps if either of these levels signifies keep, otherwise evicts
-(<||>) :: LevelDef -> LevelDef -> LevelDef
 (l <||> r) snap = do
+  (keepL, evictL) <- l snap
+  (keepR, evictR) <- r snap
+  let keepF = keepL `union` keepR -- TODO this union is no good because the reasons will differ...
+  let evictF = snap \\ (keepsToSnaps keepF)
+  return (keepF, evictF)
+
+
+-- old version of <||> that fed the evicts from LHS to RHS, which would lead
+-- to different (always more?) being kept.
+(<|-|>) :: LevelDef -> LevelDef -> LevelDef
+(l <|-|> r) snap = do
   (keepL, evictL) <- l snap
   (keepR, evictR) <- r evictL
   return (keepL ++ keepR, evictR)
