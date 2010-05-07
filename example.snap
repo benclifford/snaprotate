@@ -1,10 +1,10 @@
 #!/usr/bin/env snaprotate
 
-policy = level1 <||> level2 <||> level3
+policy = recent <||> weekly <||> monthly
 
-level1 = (keepLastWithinDuration twodays) <?> "keep last 48h"
-level2 = keepOnePerWeekLast4Weeks <?> "one per week, last month"
-level3 =  keepOnePerMonth <?> "one per month, forever"
+recent = (keepLastWithinDuration twodays) <?> "keep last 48h"
+weekly = keepOnePerWeekLast4Weeks <?> "one per week, last month"
+monthly =  keepOnePerMonth <?> "one per month, forever"
 
 twodays = 2 * oneday
 oneweek = 7 * oneday
