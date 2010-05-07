@@ -150,7 +150,7 @@ snapToKeep reason snap = MkKeep snap reason -- so almost the MkKeep constructor
 
 -- logging
 logProgress str = hPutStrLn stderr str
-logDebug str = hPutStrLn stderr str
+logDebug str = return () -- hPutStrLn stderr str
 
 -- commandline
 
