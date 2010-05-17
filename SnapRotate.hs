@@ -4,6 +4,7 @@ module SnapRotate where
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
+import System.Exit
 import System.IO
 
 import Data.List
@@ -14,6 +15,7 @@ import System.Locale
 import Data.Time.Clock
 
 import Control.Applicative
+import Control.Monad
 
 data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
   deriving (Show, Eq)
@@ -32,7 +34,9 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 runLevels levels = do
   logProgress "snaprotate, Copyright 2010 Ben Clifford benc@hawaga.org.uk"
   filteredDirs <- readDirs
-  (opts,_,_) <- getOpt Permute commandLineOptions <$> getArgs
+  (opts,_,errs) <- getOpt Permute commandLineOptions <$> getArgs
+
+  when (errs /= []) (logCLIError errs)
   let base = extractBase opts
   logDebug $ show opts
   logDebug "after home prefix filter: "
@@ -168,3 +172,7 @@ extractBase :: [CLIOpts] -> String
 extractBase ((OptBase s):rest) = s
 extractBase (_:rest)= extractBase rest
 
+logCLIError errs = do
+  putStrLn $ "Commandline error"
+  mapM putStrLn errs
+  exitFailure
