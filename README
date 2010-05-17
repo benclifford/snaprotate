@@ -70,3 +70,12 @@ Other environments rather than specifically deleting:
    disk-usage by rule - needs rule to be human describable - so maybe LevelDef should then have a textual description interface too, rather than being just a function - output that looks like ls but gives a column showing which rule kept a particular directory- so then rule text descr should be 40cols or less...
 
 
+
+feature request:  'keepLastN' - keep the last 3 backups, no matter how old
+they are. Usecase: on my laptop, I run backups by hand because of
+connectivity of ext HD. and I run snaprotate by hand. But if I don't backup
+for a while and then run snaprotate, the most recent backup might pass out of
+the 'keep last 48h' level and but not be kept by the 'once per month' or
+'once per week' level. This will keep the N most recent backups, no matter
+how old they are.
+
