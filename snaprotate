@@ -13,11 +13,16 @@ LIBDIR=$(dirname $0)
 
 cat > $FNHS << 32804384892038493284093
 import SnapRotate
-main = runLevels policy
 
 32804384892038493284093
 
 cat $1 | grep --invert-match '^#!' >> $FNHS
+
+cat >> $FNHS << 32804384892038493284093
+
+main = runLevels policy
+32804384892038493284093
+
 shift
 runhaskell -i$LIBDIR $FNHS $@
 
