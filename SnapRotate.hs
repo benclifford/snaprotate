@@ -184,7 +184,7 @@ logCLIError errs = do
 
 cliHelp = do
   putStrLn $ usageInfo "Usage: snaprotate [OPTION...]" commandLineOptions
-  exitSuccess
+  exitWith ExitSuccess
 
 
 
