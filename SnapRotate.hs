@@ -12,13 +12,23 @@ import Data.Maybe
 
 import Data.Time.Format
 import System.Locale
+import Data.Time.Calendar
 import Data.Time.Clock
 
 import Control.Applicative
 import Control.Monad
 
-data Snap = MkSnap { snapfn :: String, snaptime :: UTCTime }
+
+data Snap = MkSnap { snapfn :: String, internalSnaptime :: SnapTimestamp }
   deriving (Show, Eq)
+
+-- keep this as a barely-parsed string so that we can use parseTime to
+-- get it into various different time formats that implement ParseTime
+type SnapTimestamp = String
+
+-- this should be polymorphic in its return type
+snaptime :: (ParseTime t) => Snap -> t
+snaptime (MkSnap _ t) = fromJust $ parseTime defaultTimeLocale ("%Y-%m-%d-%H%M%z") t
 
 data Keep = MkKeep { keeper :: Snap, reason :: String } deriving Show
 instance Eq Keep where 
@@ -42,14 +52,14 @@ runLevels levels = do
 
   let base = extractBase opts
   logDebug $ show opts
-  logDebug "after home prefix filter: "
+  logDebug "snapdirectories to examine: "
   logDebug $ show filteredDirs
   let fltA = map (\fn -> (fn, fnToTime base fn)) filteredDirs
-  logDebug "after fltA: "
+  logDebug "After checking snapdirectory names match base/time template (fltA)"
   logDebug $ show fltA
   let fltB = map (\(fn, t) -> maybe Nothing (\ut -> Just (fn,ut)) t) fltA
   let fltC = catMaybes fltB
-  logDebug "after ignoring: "
+  logDebug "After filtering non-matching snapdirectory names (fltC)"
   logDebug $ show fltC
   let sorted = sortBy (\(_,l) -> \(_,r) -> compare l r) fltC
   let original = map (\(fn,time) -> MkSnap fn time) sorted
@@ -69,27 +79,28 @@ readDirs = do
 keepEverything :: LevelDef
 keepEverything l = return (snapsToKeeps "keepEverything" l,[])
 
--- whats the best way to get this constant?
-oneday :: NominalDiffTime
-oneday = fromRational $ toRational $ secondsToDiffTime (24 * 60 * 60)
 
 keepLastWithinDuration duration l = do 
     now <- getCurrentTime
-    let keepable snap = (now `diffUTCTime` snaptime snap) > duration
+    let keepable snap = (now `diffUTCTime` snaptime snap) > (getDuration duration)
     let rearrange (a,b) = (snapsToKeeps "keepLastWithinDuration" b,a)
     return $ rearrange $ partition keepable l
 
 
-
-fnToTime :: String -> String -> Maybe UTCTime
-fnToTime base fn = parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn
+-- filters out non-matching times
+-- this and snaptime are closely related - TODO share parse expression
 -- eg:  home-2010-05-03-2309+0000
+fnToTime :: String -> String -> Maybe SnapTimestamp
+fnToTime base fn = let
+    p = (parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn) :: Maybe UTCTime
+  in maybe Nothing (\t -> stripPrefix (base++"-") fn) p
 
 
 -- fmt defines an equivalence relation on dates, and we keep one in each
 -- of those equivalence classes.
-keepOnePerTimeFormat fmt snaps = do
-   let ymtime t = formatTime defaultTimeLocale fmt t
+keepOneEvery :: (ParseTime t) => TimeSpec t -> [Snap] -> IO ([Keep],[Snap])
+keepOneEvery timespec snaps = do
+   let ymtime t = (getBucket timespec) t
    let timedSnaps = map (\s ->(s, snaptime s)) snaps -- annotate with time
    let ymSnaps = map (\(s,t) -> (s, ymtime t)) timedSnaps -- project year and month
    let groupedByYM = groupBy (\(_,l) -> \(_,r) -> l==r) ymSnaps
@@ -99,7 +110,7 @@ keepOnePerTimeFormat fmt snaps = do
    -- sort each partition by date
    -- pick the first of each partition
    -- return all of those as keepers
-   return (snapsToKeeps "keepOnePerTimeFormat" firstOfEachYM, snaps \\ firstOfEachYM)
+   return (snapsToKeeps "keepOneEvery" firstOfEachYM, snaps \\ firstOfEachYM)
 
 -- keeps if both of these levels signifies keep, otherwise evicts
 (<&&>) :: LevelDef -> LevelDef -> LevelDef
@@ -174,3 +185,57 @@ logCLIError errs = do
 cliHelp = do
   putStrLn $ usageInfo "Usage: snaprotate [OPTION...]" commandLineOptions
   exitSuccess
+
+
+
+-- duration/time bucket definitions
+
+data TimeSpec t = MkTimeSpec {
+  getDuration :: NominalDiffTime,
+  getBucket :: t -> Integer }
+
+-- makes a new TimeSpec that is n times as long as the supplied TimeSpec
+(<*>) :: Integer -> TimeSpec t -> TimeSpec t
+n <*> spec = MkTimeSpec ( (fromInteger n) * getDuration spec) ( \ts -> (getBucket spec ts) `quot` n )
+
+day = MkTimeSpec {
+    getDuration = fromRational $ toRational $ secondsToDiffTime (24 * 60 * 60),
+    getBucket = toModifiedJulianDay
+  }
+
+-- TODO month
+-- for duration, 31 days *or* the time from now to the same day last month
+-- both similar, 31 is strictly longer, I think
+-- for buckets, year*12 + month, because year is an exact multiple months
+
+month = MkTimeSpec {
+    getDuration = fromRational $ toRational $ secondsToDiffTime (31 * 24 * 60 * 60),
+    getBucket = \ts -> let
+        (year, month, _) = toGregorian ts
+      in 12 * year +  fromIntegral month - 1
+  }
+
+-- the bucket handling needs to: i) be able to be applied to a time to
+-- distinguish buckets
+-- ii) have <*> used to reduce the number of buckets
+-- if we're using a bucket ID then that bucket ID must be something we can
+-- divide, using <*> - so an integer, for example, but then it must have
+-- the property that adjacent buckets are numbered sequentially, so eg
+-- 200653 for the last week of 2006 followed by 200701 is no good.
+-- plus using week numbers there must be careful because variable number of
+-- ISO weeks in a year...
+
+-- we can define weeks in terms of days, though
+-- week = 7 <*> day
+
+-- and we can define year in terms of months
+-- year = 12 <*> month
+
+-- so day and month appear to be two base units that are irreconcilable
+-- and we can define the other stuff that we want in terms of those
+
+-- so a timespec should give a bucketid, an integer, for each
+-- timestamp, subject to the above constraints.
+
+-- whats the best way to get this constant?
+

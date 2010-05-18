@@ -6,13 +6,14 @@ recent = (keepLastWithinDuration twodays) <?> "keep last 48h"
 weekly = keepOnePerWeekLast4Weeks <?> "one per week, last month"
 monthly =  keepOnePerMonth <?> "one per month, forever"
 
-twodays = 2 * oneday
-oneweek = 7 * oneday
+twodays = 2 <*> day
+week = 7 <*> day
 
-keepOnePerMonth = keepOnePerTimeFormat "%Y-%m"
+keepOnePerMonth = keepOneEvery month
 
 keepOnePerWeekLast4Weeks = keepOnePerWeek <&&> keepLast4Weeks
 
-keepOnePerWeek = keepOnePerTimeFormat "%Y-%U"
-keepLast4Weeks = keepLastWithinDuration (4 * oneweek)
+keepOnePerWeek = keepOneEvery week
+keepLast4Weeks = keepLastWithinDuration month
+
 
