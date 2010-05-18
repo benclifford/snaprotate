@@ -25,4 +25,5 @@ main = runLevels policy
 
 shift
 runhaskell -i$LIBDIR $FNHS $@
+rm $FNHS
 
