@@ -1,0 +1,19 @@
+This file contains some bugs and feature requests.
+
+feature request:  'keepLastN' - keep the last 3 backups, no matter how old
+they are. Usecase: on my laptop, I run backups by hand because of
+connectivity of ext HD. and I run snaprotate by hand. But if I don't backup
+for a while and then run snaprotate, the most recent backup might pass out of
+the 'keep last 48h' level and but not be kept by the 'once per month' or
+'once per week' level. This will keep the N most recent backups, no matter
+how old they are.
+
+feature request: actually execute rm commands rather than outputting them
+
+todo: idea from dmwit on reddit about using <() instead of explicit temp file
+  (runhaskell from ghc 6.10.1 doesn't like FDs coming from <() and wants a
+   real file, so maybe this won't work)
+
+feature request: unify the time handling for withinDuration and perTimeFormat
+so that "month" and "2 * month" can be used in either context.
+
