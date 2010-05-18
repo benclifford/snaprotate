@@ -36,7 +36,10 @@ runLevels levels = do
   filteredDirs <- readDirs
   (opts,_,errs) <- getOpt Permute commandLineOptions <$> getArgs
 
+  -- these will short circuit execution and exit
   when (errs /= []) (logCLIError errs)
+  when (OptHelp `elem` opts) cliHelp
+
   let base = extractBase opts
   logDebug $ show opts
   logDebug "after home prefix filter: "
@@ -158,10 +161,11 @@ logDebug str = return () -- hPutStrLn stderr str
 
 -- commandline
 
-data CLIOpts = OptBase String deriving Show
+data CLIOpts = OptBase String | OptHelp deriving (Show, Eq)
 
 commandLineOptions = [
-  Option "b" ["base"] (ReqArg OptBase "BASE") "base of snapshot directory names"
+  Option "b" ["base"] (ReqArg OptBase "BASE") "base of snapshot directory names",
+  Option "h" ["help"] (NoArg OptHelp) "display this help and exit"
  ]
 
 -- as base is a required opt, then this must always work
@@ -173,6 +177,11 @@ extractBase ((OptBase s):rest) = s
 extractBase (_:rest)= extractBase rest
 
 logCLIError errs = do
-  putStrLn $ "Commandline error"
+  putStrLn $ "Usage error:"
   mapM putStrLn errs
+  putStrLn $ "Try `snaprotate --help' for more usage information"
   exitFailure
+
+cliHelp = do
+  putStrLn $ usageInfo "Usage: snaprotate [OPTION...]" commandLineOptions
+  exitSuccess
