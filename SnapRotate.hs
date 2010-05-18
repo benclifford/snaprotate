@@ -163,6 +163,7 @@ commandLineOptions = [
 extractBase :: [CLIOpts] -> String
 extractBase ((OptBase s):rest) = s
 extractBase (_:rest)= extractBase rest
+extractBase [] = error "--base commandline option must be specified"
 
 logCLIError errs = do
   putStrLn $ "Usage error:"
