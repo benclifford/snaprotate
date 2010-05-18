@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#!/bin/bash
+
+export PREVIOUS=$(ls -dt /snap/* | head -n 1)
+
+export NEW=$(date +%Y-%m-%d-%H%M%z)
+
+time rsync --archive / /snap/root-${NEW}/ --link-dest=$PREVIOUS --exclude=/snap --stats --one-file-system
+
