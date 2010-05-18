@@ -1,7 +1,6 @@
 #!/bin/bash
 
-FN=$(mktemp /tmp/snaprotateXXXXX).hs
-FNHS=$FN.hs
+FNHS=$(mktemp /tmp/snaprotateXXXXX).hs
 
 # echo Will use filename $FNHS >&2
 
