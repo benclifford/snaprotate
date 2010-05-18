@@ -53,14 +53,6 @@ runLevels levels = do
   logDebug $ show fltC
   let sorted = sortBy (\(_,l) -> \(_,r) -> compare l r) fltC
   let original = map (\(fn,time) -> MkSnap fn time) sorted
-  -- TODO -- multiple ignore stages (with recorded reasons) here
-  -- reasons to ignore:
-  -- i) directoryname prefix (hardcoded elsewhere at the moment)
-
-  -- ii) unparseable date (at same time as converting to a Snap type)
-
-  -- note the naming here -- in general, keeps should be appended, and
-  -- evict should be serially threaded
   (keepF,evictF) <- levels original
   logDebug "keep: "
   logDebug $ show keepF
@@ -68,7 +60,6 @@ runLevels levels = do
   logDebug $ show evictF
   mapM_ (\(MkKeep (MkSnap fn _) reason) -> putStrLn $ "# keep: "++fn++": "++reason) keepF
   mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rf "++f) evictF
-  -- TODO some actual output
 
 -- mmm fake
 readDirs = do
@@ -90,9 +81,6 @@ keepLastWithinDuration duration l = do
 
 
 
--- TODO this needs to work on something other than a "home" prefix. perhaps
--- the prefix could be specified on the command line, and we only pay
--- attention to files with that prefix.
 fnToTime :: String -> String -> Maybe UTCTime
 fnToTime base fn = parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn
 -- eg:  home-2010-05-03-2309+0000
