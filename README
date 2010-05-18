@@ -1,5 +1,6 @@
 snaprotate
 Copyright 2010 Ben Clifford benc@hawaga.org.uk
+BSD-like licence
 
 Deletes old rsync snapshots based on filename-encoded dates and
 user-specified policy.
