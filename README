@@ -83,4 +83,3 @@ feature request: actually execute rm commands rather than outputting them
 
 todo: idea from dmwit on reddit about using <() instead of explicit temp file
 
-bug: not correctly detecting lack of --base
