@@ -80,10 +80,10 @@ keepEverything :: LevelDef
 keepEverything l = return (snapsToKeeps "keepEverything" l,[])
 
 
-keepLastWithinDuration duration l = do 
+keepLast duration l = do 
     now <- getCurrentTime
     let keepable snap = (now `diffUTCTime` snaptime snap) > (getDuration duration)
-    let rearrange (a,b) = (snapsToKeeps "keepLastWithinDuration" b,a)
+    let rearrange (a,b) = (snapsToKeeps "keepLast" b,a)
     return $ rearrange $ partition keepable l
 
 
