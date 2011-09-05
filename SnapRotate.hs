@@ -42,7 +42,7 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 --    any side-effects are OK as long as they're 'sane'
 
 runLevels levels = do
-  logProgress "snaprotate, Copyright 2010 Ben Clifford benc@hawaga.org.uk"
+  logProgress "snaprotate, Copyright 2010-2011 Various authors"
   filteredDirs <- readDirs
   (opts,_,errs) <- getOpt Permute commandLineOptions <$> getArgs
 
@@ -69,7 +69,9 @@ runLevels levels = do
   logDebug "evict: "
   logDebug $ show evictF
   mapM_ (\(MkKeep (MkSnap fn _) reason) -> putStrLn $ "# keep: "++fn++": "++reason) keepF
-  mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rf "++f) evictF
+  case (extractMode opts) of
+    ModeRM -> mapM_ (\(MkSnap f _) -> putStrLn $ "rm -rf "++f) evictF
+    ModeList -> mapM_ (\(MkSnap f _) -> putStrLn $ "# delete: "++f) evictF
 
 -- mmm fake
 readDirs = do
@@ -160,12 +162,18 @@ logDebug str = return () -- hPutStrLn stderr str
 
 -- commandline
 
-data CLIOpts = OptBase String | OptHelp deriving (Show, Eq)
+data RunMode = ModeRM | ModeList deriving (Show, Eq) -- and I want ModeDU
+data CLIOpts = OptBase String | OptHelp | OptMode RunMode deriving (Show, Eq)
 
 commandLineOptions = [
   Option "b" ["base"] (ReqArg OptBase "BASE") "base of snapshot directory names",
-  Option "h" ["help"] (NoArg OptHelp) "display this help and exit"
+  Option "h" ["help"] (NoArg OptHelp) "display this help and exit",
+  Option "m" ["mode"] (ReqArg parseRunMode "MODE") "mode (rm, list)"
  ]
+
+parseRunMode "rm" = OptMode ModeRM
+parseRunMode "list" = OptMode ModeList
+parseRunMode m = error $ "Unknown --mode "++m
 
 -- as base is a required opt, then this must always work
 -- so this code doesn't handle the case of running out of opts...
@@ -175,6 +183,11 @@ extractBase :: [CLIOpts] -> String
 extractBase ((OptBase s):rest) = s
 extractBase (_:rest)= extractBase rest
 extractBase [] = error "--base commandline option must be specified"
+
+extractMode :: [CLIOpts] -> RunMode
+extractMode ((OptMode m) : rest) = m
+extractMode (_:rest) = extractMode rest
+extractMode [] = error "--mode commandline option must be specified"
 
 logCLIError errs = do
   putStrLn $ "Usage error:"
