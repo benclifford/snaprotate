@@ -42,7 +42,7 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 --    any side-effects are OK as long as they're 'sane'
 
 runLevels levels = do
-  logProgress "snaprotate, Copyright 2010-2011 Various authors"
+  logProgress "snaprotate, Copyright 2010-2014 Various authors"
   filteredDirs <- readDirs
   (opts,_,errs) <- getOpt Permute commandLineOptions <$> getArgs
 
