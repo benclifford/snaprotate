@@ -11,7 +11,6 @@ import Data.List
 import Data.Maybe
 
 import Data.Time.Format
-import System.Locale
 import Data.Time.Calendar
 import Data.Time.Clock
 
