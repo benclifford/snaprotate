@@ -4,6 +4,6 @@ Build-Type: Simple
 Cabal-Version: >=1.6
 Description: Deletes old backup directories
 Library
-  Build-Depends: base, time, old-locale, directory
+  Build-Depends: base, time >=1.5, old-locale, directory
   Exposed-Modules: SnapRotate
 
