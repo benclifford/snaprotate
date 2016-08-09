@@ -1,5 +1,10 @@
 #!/usr/bin/env snaprotate
 
+import Prelude hiding ( (<*>) )
+import SnapRotate
+
+main = runLevels policy
+
 policy = recent <||> weekly <||> monthly
 
 recent = keepLast twodays <?> "keep last 48h"
