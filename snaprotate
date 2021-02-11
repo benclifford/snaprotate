@@ -11,6 +11,7 @@ FNHS=$(mktemp /tmp/snaprotateXXXXX).hs
 LIBDIR=$(dirname $0)
 
 cat > $FNHS << 32804384892038493284093
+import Prelude hiding ( (<*>) )
 import SnapRotate
 
 32804384892038493284093
@@ -23,6 +24,6 @@ main = runLevels policy
 32804384892038493284093
 
 shift
-runhaskell -i$LIBDIR $FNHS $@
+stack --stack-yaml=${LIBDIR}/stack.yaml runhaskell -- -i$LIBDIR $FNHS $@
 rm $FNHS
 

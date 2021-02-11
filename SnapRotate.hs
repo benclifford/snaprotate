@@ -1,6 +1,7 @@
 
 module SnapRotate where 
 
+import Prelude hiding ( (<*>) )
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
