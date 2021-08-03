@@ -17,6 +17,7 @@ import Data.Time.Clock
 import Control.Applicative
 import Control.Monad
 
+copyright = "snaprotate, Copyright 2010-2021 Various authors"
 
 data Snap = MkSnap { snapfn :: String, internalSnaptime :: SnapTimestamp }
   deriving (Show, Eq)
@@ -41,7 +42,7 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 --    any side-effects are OK as long as they're 'sane'
 
 runLevels levels = do
-  logProgress "snaprotate, Copyright 2010-2014 Various authors"
+  logProgress copyright
   filteredDirs <- readDirs
   (opts,_,errs) <- getOpt Permute commandLineOptions <$> getArgs
 
