@@ -42,6 +42,7 @@ type LevelDef = [Snap] -> IO ([Keep],[Snap])
 --    a ++ b == existing (up to order)
 --    any side-effects are OK as long as they're 'sane'
 
+runLevels :: LevelDef -> IO ()
 runLevels levels = do
   logProgress copyright
   filteredDirs <- readDirs
