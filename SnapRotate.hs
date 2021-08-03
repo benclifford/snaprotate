@@ -99,6 +99,13 @@ fnToTime base fn = let
   in maybe Nothing (\t -> stripPrefix (base++"-") fn) p
 
 
+-- keep n snapshots. This assumes snaps are in date order so that taking
+-- the last n snapshots in the list takes the most recent n snapshots.
+keepN :: Int -> LevelDef
+keepN n snaps = do
+  let keepers = take n $ reverse snaps
+  return (snapsToKeeps "keepN" keepers, snaps \\ keepers)
+
 -- fmt defines an equivalence relation on dates, and we keep one in each
 -- of those equivalence classes.
 keepOneEvery :: (ParseTime t) => TimeSpec t -> [Snap] -> IO ([Keep],[Snap])
