@@ -22,13 +22,13 @@ copyright = "snaprotate, Copyright 2010-2021 Various authors"
 data Snap = MkSnap { snapfn :: String, internalSnaptime :: SnapTimestamp }
   deriving (Show, Eq)
 
--- keep this as a barely-parsed string so that we can use parseTime to
+-- keep this as a barely-parsed string so that we can use parseTimeM to
 -- get it into various different time formats that implement ParseTime
 type SnapTimestamp = String
 
 -- this should be polymorphic in its return type
 snaptime :: (ParseTime t) => Snap -> t
-snaptime (MkSnap _ t) = fromJust $ parseTime defaultTimeLocale ("%Y-%m-%d-%H%M%z") t
+snaptime (MkSnap _ t) = fromJust $ parseTimeM True defaultTimeLocale ("%Y-%m-%d-%H%M%z") t
 
 data Keep = MkKeep { keeper :: Snap, reason :: String } deriving Show
 instance Eq Keep where 
@@ -95,7 +95,7 @@ keepLast duration l = do
 -- eg:  home-2010-05-03-2309+0000
 fnToTime :: String -> String -> Maybe SnapTimestamp
 fnToTime base fn = let
-    p = (parseTime defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn) :: Maybe UTCTime
+    p = (parseTimeM True defaultTimeLocale (base++"-%Y-%m-%d-%H%M%z") fn) :: Maybe UTCTime
   in maybe Nothing (\t -> stripPrefix (base++"-") fn) p
 
 
