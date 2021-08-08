@@ -2,7 +2,8 @@
 
 policy = recent <||> weekly <||> monthly
 
-recent = keepLast twodays <?> "keep last 48h"
+recent = (keepLast twodays <?> "keep last 48h")
+    <||> (keepN 2 <?> "keep last two")
 weekly = keepOnePerWeekLast4Weeks <?> "one per week, last month"
 monthly =  keepOnePerMonth <?> "one per month, forever"
 
