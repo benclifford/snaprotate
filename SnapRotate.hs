@@ -133,6 +133,7 @@ keepOneEvery timespec snaps = do
   return (keepF, evictF)
 
 -- keeps if either of these levels signifies keep, otherwise evicts
+(<||>) :: LevelDef -> LevelDef -> LevelDef
 (l <||> r) snap = do
   (keepL, evictL) <- l snap
   (keepR, evictR) <- r snap
