@@ -141,11 +141,10 @@ keepOneEvery timespec snaps = do
   let evictF = snap \\ (keepsToSnaps keepF)
   return (keepF, evictF)
 
--- will be used for annotating keeps, but not impl yet
+-- Annotate a level definition with a new description for kept snaps
 (<?>) :: LevelDef -> String -> LevelDef
 (l <?> desc) x = do
   (keeps, evicts) <-  l x
-  -- return (map (\(MkKeep s oldreason) -> MkKeep s (desc ++ ": " ++ oldreason)) keeps , evicts)
   return (snapsToKeeps desc (keepsToSnaps keeps), evicts)
 
 keepsToSnaps :: [Keep] -> [Snap]
