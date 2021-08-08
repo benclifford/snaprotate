@@ -140,15 +140,6 @@ keepOneEvery timespec snaps = do
   let evictF = snap \\ (keepsToSnaps keepF)
   return (keepF, evictF)
 
-
--- old version of <||> that fed the evicts from LHS to RHS, which would lead
--- to different (always more?) being kept.
-(<|-|>) :: LevelDef -> LevelDef -> LevelDef
-(l <|-|> r) snap = do
-  (keepL, evictL) <- l snap
-  (keepR, evictR) <- r evictL
-  return (keepL ++ keepR, evictR)
-
 -- will be used for annotating keeps, but not impl yet
 (<?>) :: LevelDef -> String -> LevelDef
 (l <?> desc) x = do
