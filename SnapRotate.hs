@@ -149,12 +149,13 @@ keepOneEvery timespec snaps = do
 
 keepsToSnaps :: [Keep] -> [Snap]
 keepsToSnaps = map keepToSnap
-keepToSnap (MkKeep s _) = s
+  where
+    keepToSnap (MkKeep s _) = s
 
 snapsToKeeps :: String -> [Snap] -> [Keep]
 snapsToKeeps reason = map (snapToKeep reason)
-
-snapToKeep reason snap = MkKeep snap reason -- so almost the MkKeep constructor
+  where
+    snapToKeep reason snap = MkKeep snap reason -- so almost the MkKeep constructor
 
 -- logging
 logProgress str = hPutStrLn stderr str
